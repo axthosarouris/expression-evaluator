@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BasicLambdaHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">hello</a> &gt; <a href="index.source.html" class="el_package">com.github.axthosarouris</a> &gt; <span class="el_source">BasicLambdaHandler.java</span></div><h1>BasicLambdaHandler.java</h1><pre class="source lang-java linenums">package com.github.axthosarouris;
+
+import static nva.commons.core.attempt.Try.attempt;
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import nva.commons.core.ioutils.IoUtils;
+
+public abstract class BasicLambdaHandler&lt;I, O&gt; implements RequestStreamHandler {
+
+  private final Class&lt;I&gt; inputClass;
+
+<span class="fc" id="L18">  protected BasicLambdaHandler(Class&lt;I&gt; inputClass) {</span>
+<span class="fc" id="L19">    this.inputClass = inputClass;</span>
+<span class="fc" id="L20">  }</span>
+
+  @Override
+  public void handleRequest(InputStream input, OutputStream outputStream, Context context) {
+<span class="fc" id="L24">    var inputString = IoUtils.streamToString(input);</span>
+<span class="fc" id="L25">    var inputObject = parseInput(inputString);</span>
+<span class="fc" id="L26">    O outputObject = processInput(inputObject, context);</span>
+<span class="fc" id="L27">    writeResponse(outputObject, outputStream);</span>
+
+<span class="fc" id="L29">  }</span>
+
+  protected abstract O processInput(I inputObject, Context context);
+
+  protected I parseInput(String inputString) {
+<span class="fc" id="L34">    return attempt(() -&gt; JsonConfig.json.readValue(inputString, inputClass)).orElseThrow();</span>
+  }
+
+  private void writeResponse(O response, OutputStream outputStream) {
+<span class="fc" id="L38">    try (var writer = new BufferedWriter(new OutputStreamWriter(outputStream))) {</span>
+<span class="fc" id="L39">      var outputString = JsonConfig.json.writeValueAsString(response);</span>
+<span class="fc" id="L40">      writer.append(outputString);</span>
+<span class="nc" id="L41">    } catch (IOException e) {</span>
+<span class="nc" id="L42">      throw new IllegalStateException(e);</span>
+<span class="fc" id="L43">    }</span>
+<span class="fc" id="L44">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

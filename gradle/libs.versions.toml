@@ -1,0 +1,42 @@
+[versions]
+junit = { strictly = '5.8.2' }
+assertj = { strictly = '3.23.1' }
+cdk = { strictly = '2.55.1' }
+lambda = { strictly = '1.2.2' }
+nva = { strictly = '1.26.0' }
+mockito = { strictly = '4.10.0' }
+log4j = { strictly = '2.17.2' }
+slf4j = { strictly = '2.0.6' }
+log4jslf4j = { strictly = '2.17.1' }
+lambda-log4j2 = { strictly = '1.5.1' }
+sdk2 = {strictly = '2.17.191'}
+jackson = {strictly = '2.14.1'}
+
+[libraries]
+lambda-core = { group = 'com.amazonaws', name = 'aws-lambda-java-core', version.ref = 'lambda' }
+kinesis = { group= 'software.amazon.awssdk', name= 'kinesis', version.ref= 'sdk2' }
+url-connection-client= { group= 'software.amazon.awssdk', name= 'url-connection-client', version.ref = 'sdk2'}
+nva-json = { group = 'com.github.bibsysdev', name = 'json', version.ref = 'nva' }
+nva-core = { group = 'com.github.bibsysdev', name = 'core', version.ref = 'nva' }
+
+
+jackson-core = { group= 'com.fasterxml.jackson.core', name= 'jackson-core', version.ref= 'jackson' }
+jackson-databind = { group= 'com.fasterxml.jackson.core', name= 'jackson-databind', version.ref= 'jackson' }
+jackson-annotations = { group= 'com.fasterxml.jackson.core', name= 'jackson-annotations', version.ref= 'jackson' }
+
+junit-api = { group = 'org.junit.jupiter', name = 'junit-jupiter-api', version.ref = 'junit' }
+junit-engine = { group = 'org.junit.jupiter', name = 'junit-jupiter-engine', version.ref = 'junit' }
+junit-params = { group = 'org.junit.jupiter', name = 'junit-jupiter-params', version.ref = 'junit' }
+assertj = { group = 'org.assertj', name = 'assertj-core', version.ref = 'assertj' }
+mockito = { group = 'org.mockito', name = 'mockito-core', version.ref = 'mockito' }
+testutils = { group = 'com.github.bibsysdev', name = 'nvatestutils', version.ref = 'nva' }
+
+log4j-core = { group = 'org.apache.logging.log4j', name = 'log4j-core', version.ref = 'log4j' }
+slf4j = { group = 'org.slf4j', name = 'slf4j-api', version = 'slf4j' }
+slf4j-binding = { group = 'org.apache.logging.log4j', name = 'log4j-slf4j18-impl', version.ref = 'log4jslf4j' }
+lambda-log4j2 = { group = 'com.amazonaws', name = 'aws-lambda-java-log4j2', version.ref = 'lambda-log4j2' }
+
+[bundles]
+testing = ['junit-api', 'junit-engine', 'junit-params', 'assertj', 'testutils', 'mockito']
+logging = ['log4j-core', 'slf4j-binding', 'slf4j','lambda-log4j2']
+json =['jackson-core','jackson-databind','jackson-annotations']

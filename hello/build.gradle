@@ -1,0 +1,20 @@
+plugins {
+    id 'com.github.axthosarouris.java-library-conventions'
+}
+
+dependencies {
+  implementation libs.lambda.core
+  implementation libs.bundles.logging
+  implementation libs.kinesis
+  implementation libs.bundles.json
+  implementation libs.nva.core
+  implementation libs.nva.json
+  implementation libs.url.connection.client
+  testImplementation libs.bundles.testing
+
+}
+
+test{
+  environment "KINESIS_STREAM", "KinesisStream"
+  environment "AWS_REGION", "eu-west-1"
+}

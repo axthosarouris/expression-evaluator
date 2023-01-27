@@ -1,0 +1,205 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Sample Template
+
+Parameters:
+  SegmentAccount:
+    Type: String
+    Default: 595280932656
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1798
+
+Resources:
+
+
+  DataStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: OrestisTestStream
+      RetentionPeriodHours: 24
+      StreamModeDetails:
+        StreamMode: ON_DEMAND
+      Tags:
+        - Key: "OrestisTagKey"
+          Value: "OrestisTagValue"
+
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'datastream-${AWS::AccountId}'
+      Tags:
+        - Key: "OrestisTagKey"
+          Value: "OrestisTagValue"
+
+  WriteStreamDataToS3:
+    DependsOn:
+      - KinesisAppendedPermissions
+      - KinesisReadPermissions
+      - DefaultLambdaPermissions
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamName: OrestisFirehose
+      DeliveryStreamType: KinesisStreamAsSource
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt DataStream.Arn
+        RoleARN: !GetAtt WriteStreamToS3Role.Arn
+      S3DestinationConfiguration:
+        BucketARN: !GetAtt DataBucket.Arn
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 50
+        CompressionFormat: GZIP
+        ErrorOutputPrefix: errors
+        Prefix: !Sub '${DataStream}/'
+        RoleARN: !GetAtt WriteStreamToS3Role.Arn
+      Tags:
+        - Key: "OrestisTagKey"
+          Value: "OrestisTagValue"
+
+  AppendToStream:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello
+      Handler: com.github.axthosarouris.Handler::handleRequest
+      Runtime: java11
+      Role: !GetAtt LambdaRole.Arn
+      Environment:
+        Variables:
+          KINESIS_STREAM: !Ref DataStream
+      Architectures:
+        - x86_64
+      Tags:
+        OrestisTagKey : "OrestisTagValue"
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+
+  WriteStreamToS3Role:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - firehose.amazonaws.com
+            Action: sts:AssumeRole
+
+
+
+  ExternalActorWritesToKinesisRole:
+    DependsOn:
+      - SegmentSecret
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              AWS: !Ref SegmentAccount
+            Condition:
+              StringEquals:
+                sts:ExternalId: '{{resolve:secretsmanager:SegmentExternalId:SecretString:ExternalId}}'
+
+
+  DefaultLambdaPermissions:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub DefaultLambdaPermissions-${AWS::StackName}
+      Roles:
+        - !Ref LambdaRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - lambda:InvokeFunction
+            Resource: "*"
+
+  KinesisAppendedPermissions:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub WriteToKinesis-${AWS::StackName}
+      Roles:
+        - !Ref LambdaRole
+        - !Ref ExternalActorWritesToKinesisRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - iam:SimulatePrincipalPolicy
+            Resource: !GetAtt ExternalActorWritesToKinesisRole.Arn
+          - Effect: Allow
+            Action:
+              - kinesis:PutRecord
+              - kinesis:PutRecords
+            Resource:  !GetAtt DataStream.Arn
+
+
+
+
+
+  KinesisReadPermissions:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ReadFromKinesis-${AWS::StackName}
+      Roles:
+        - !Ref WriteStreamToS3Role
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - kinesis:DescribeStream
+              - kinesis:SubscribeToShard
+              - kinesis:GetShardIterator
+              - kinesis:GetRecords
+              - kinesis:ListTagsForStream
+              - kinesis:ListStreams
+              - kinesis:ListShards
+            Resource:
+              - !GetAtt DataStream.Arn
+
+
+  WriteToS3Permissions:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub WriteToS3-${AWS::StackName}
+      Roles:
+        - !Ref WriteStreamToS3Role
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+            - s3:ReplicateObject
+            - s3:PutObject
+            - s3:PutObjectRetention
+            - s3:RestoreObject
+            - s3:PutObjectLegalHold
+            - s3:ReplicateDelete
+            Resource:
+              - !Sub  '${DataBucket.Arn}/*'
+              - !GetAtt DataBucket.Arn
