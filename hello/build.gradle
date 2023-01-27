@@ -13,8 +13,3 @@ dependencies {
   testImplementation libs.bundles.testing
 
 }
-
-test{
-  environment "KINESIS_STREAM", "KinesisStream"
-  environment "AWS_REGION", "eu-west-1"
-}
